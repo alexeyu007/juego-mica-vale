@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mica &amp; Vale vs. El Resfrio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pink:#ff6fb5; --pinkDark:#e0479a; --purple:#8b5cf6; --purpleDark:#6d3fe0;
+    --cream:#fff6fb;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;background:#2a1b3d}
+  body{
+    font-family:'Baloo 2','Comic Sans MS','Trebuchet MS',sans-serif;
+    display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(circle at 50% 20%,#5b3a7a 0%,#2a1b3d 70%);
+    touch-action:manipulation;user-select:none;
+  }
+  #stage{position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);border-radius:22px;overflow:hidden}
+  canvas{display:block;border-radius:22px}
+
+  .overlay{
+    position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;text-align:center;
+    color:#5b2a6b;padding:24px;
+  }
+  .hidden{display:none!important}
+
+  /* ---------- MENÚ ---------- */
+  #menu{
+    background:url('assets/portada_hd.jpg?v=20261019') center/cover no-repeat,#ffd7ec;
+  }
+  #menu .spacer{flex:1}
+  #menu .panel{
+    background:rgba(255,255,255,.92);border-radius:24px;padding:14px 18px;
+    box-shadow:0 8px 24px rgba(120,40,110,.35);max-width:390px;
+    border:3px solid #ffb6dd;
+  }
+  #menu h1{font-size:30px;line-height:1.05;color:var(--pinkDark);text-shadow:0 2px 0 #fff}
+  #menu h1 span{color:var(--purpleDark)}
+  #menu p{font-size:15px;margin-top:6px;font-weight:600}
+  #menu .howto{font-size:13.5px;margin-top:8px;color:#7a4a86;font-weight:600}
+  .btn{
+    font-family:inherit;font-weight:800;cursor:pointer;border:none;
+    border-radius:999px;color:#fff;letter-spacing:.5px;
+    box-shadow:0 6px 0 rgba(0,0,0,.18),0 10px 22px rgba(0,0,0,.25);
+    transition:transform .08s ease,box-shadow .08s ease;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+  #btnPlay{
+    position:relative;margin-top:18px;padding:0;border:none;background:none;
+    box-shadow:none;border-radius:0;overflow:visible;
+    animation:btnFloat 2.2s ease-in-out infinite;
+    transition:transform .12s ease;
+  }
+  #btnPlay .btnArt{display:block;position:relative;line-height:0}
+  #btnPlay img{
+    display:block;width:212px;height:auto;
+    filter:drop-shadow(0 8px 16px rgba(200,40,120,.45));
+  }
+  #btnPlay .btnLabel{
+    position:absolute;left:0;right:0;top:50%;transform:translateY(-54%);
+    font-size:29px;font-weight:800;color:#fff;letter-spacing:1px;
+    text-shadow:0 2px 0 rgba(190,30,100,.55),0 0 12px rgba(255,255,255,.35);
+    pointer-events:none;
+  }
+  /* barrido de brillo sobre el botón */
+  #btnPlay .btnArt::after{
+    content:"";position:absolute;top:-10%;bottom:-10%;width:46px;left:-70px;
+    background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.75) 50%,rgba(255,255,255,0) 100%);
+    transform:rotate(12deg);animation:btnShine 2.6s ease-in-out infinite;pointer-events:none;
+  }
+  #btnPlay:hover{transform:scale(1.07)}
+  #btnPlay:active{transform:translateY(4px) scale(.97)}
+  @keyframes btnFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-7px) scale(1.03)}}
+  @keyframes btnShine{0%{left:-70px}55%,100%{left:115%}}
+  #btnSound{
+    position:absolute;top:12px;right:12px;font-size:20px;padding:6px 14px;
+    background:rgba(255,255,255,.9);color:var(--purpleDark);box-shadow:0 4px 12px rgba(0,0,0,.25);
+  }
+  #bestLine{margin-top:8px;font-size:14px;font-weight:700;color:#a05bb0}
+
+  /* ---------- PAUSA / FIN ---------- */
+  .panel2{
+    background:rgba(255,255,255,.95);border:4px solid #ffb6dd;border-radius:26px;
+    padding:22px 28px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:400px;
+  }
+  .panel2 h2{font-size:34px;margin-bottom:6px}
+  .panel2 p{font-size:17px;font-weight:600;margin:4px 0}
+  .panel2 .btn{font-size:20px;padding:10px 26px;margin:8px 6px 0}
+  #btnResume{background:linear-gradient(180deg,#9d7bff,var(--purpleDark))}
+  #btnRestart{background:linear-gradient(180deg,#ff8ec9,var(--pinkDark))}
+  #btnMenu{background:linear-gradient(180deg,#ffd36b,#eaa13c)}
+  .endArt{display:flex;gap:10px;justify-content:center;margin:6px 0 2px}
+  .endArt img{width:118px;image-rendering:auto;animation:bob 1.1s ease-in-out infinite}
+  .endArt img:nth-child(2){animation-delay:.25s}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+  #endScore{font-size:22px;font-weight:800;color:var(--pinkDark);margin-top:6px}
+  #pausePanel,#endPanel{background:rgba(60,25,80,.45);backdrop-filter:blur(3px)}
+
+  /* ---------- TOP 5 ---------- */
+  .top5{
+    background:rgba(255,255,255,.9);border:3px solid #ffb6dd;border-radius:18px;
+    padding:8px 14px;margin-top:10px;max-width:330px;width:100%;
+  }
+  .top5 h3{font-size:16px;color:var(--pinkDark)}
+  .top5 ol{list-style:none;margin-top:4px}
+  .top5 li{display:flex;justify-content:space-between;gap:10px;font-weight:700;
+    font-size:15px;color:#5b2a6b;padding:2px 0}
+  .top5 li .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:62%}
+  .top5 li .celda{display:flex;align-items:center;gap:6px;overflow:hidden;min-width:0}
+  .top5 .miniAv{width:22px;height:22px;border-radius:50%;border:2px solid #fff;
+    object-fit:cover;flex:none;background:#eee}
+  .top5 li.vacio{color:#a98bb5;justify-content:center;font-weight:600;font-size:14px}
+  #saveBox{margin:10px 0 4px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  #playerName{
+    font-family:inherit;font-weight:700;font-size:16px;text-align:center;
+    width:190px;padding:8px 12px;border-radius:999px;border:3px solid #ffb6dd;
+    color:#5b2a6b;outline:none;background:#fff;
+  }
+  #playerName:focus{border-color:var(--pink)}
+  #btnSave{font-size:16px;padding:9px 20px}
+
+  /* ---------- LOGIN GOOGLE ---------- */
+  #loginBox{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    background:rgba(255,255,255,.92);border:3px solid #cfe0ff;border-radius:18px;
+    padding:10px 14px;margin-top:10px;max-width:330px;width:100%;
+  }
+  #loginBox .lbl{font-size:13px;font-weight:700;color:#7a4a86}
+  #btnGoogle{
+    font-size:15px;padding:9px 18px;background:linear-gradient(180deg,#4f8dff,#2f6ae0);
+    display:flex;align-items:center;gap:9px;
+  }
+  #btnGoogle .gicon{
+    background:#fff;border-radius:50%;width:22px;height:22px;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-weight:800;color:#4285f4;font-size:13px;font-family:Arial,sans-serif;
+  }
+  .userChip{
+    display:flex;align-items:center;gap:9px;background:#eef4ff;
+    border-radius:999px;padding:5px 12px 5px 5px;max-width:100%;
+  }
+  .userChip img{width:34px;height:34px;border-radius:50%;border:2px solid #fff;object-fit:cover}
+  .userChip .uname{font-weight:800;color:#2f4a8a;font-size:15px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+  #btnLogout{
+    font-size:13px;padding:5px 12px;background:linear-gradient(180deg,#c9c9d6,#9a9aae);
+    box-shadow:0 3px 8px rgba(0,0,0,.18);
+  }
+  #endUser{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0 2px}
+
+  /* ---------- TOAST ---------- */
+  #hint{
+    position:absolute;left:50%;bottom:18px;transform:translateX(-50%);
+    background:rgba(255,255,255,.93);color:#7a3a86;font-weight:700;font-size:14px;
+    padding:8px 16px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.3);
+    pointer-events:none;transition:opacity .4s;white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <!-- MENÚ -->
+  <div id="menu" class="overlay">
+    <button id="btnSound" class="btn" title="Sonido">🔊</button>
+    <div class="spacer"></div>
+    <div class="panel">
+      <h1>Mica &amp; Vale<br><span>vs. El Resfrio</span></h1>
+      <p>¡Toca los virus antes de que lleguen a la cuna!</p>
+      <div class="howto">Si llegan, las bebés se debilitan… y al final ¡se resfrían!<br>
+      Aguanta <b>60 segundos</b> sanas y salvas para ganar. 🛟</div>
+      <button id="btnPlay" class="btn" aria-label="Jugar">
+        <span class="btnArt"><img src="assets/sprites/btn_play.png?v=20261019" alt=""></span>
+        <span class="btnLabel">JUGAR</span>
+      </button>
+      <div id="bestLine"></div>
+      <div id="loginBox">
+        <span class="lbl">Entra con tu Google y compite en el Top 5 mundial 👇</span>
+        <button id="btnGoogle" class="btn"><span class="gicon">G</span>Entrar con Google</button>
+        <div id="userChipBox" class="hidden" style="display:flex;align-items:center;gap:8px">
+          <div class="userChip"><img id="menuAvatar" src="" alt=""><span class="uname" id="menuName"></span></div>
+          <button id="btnLogout" class="btn">Salir</button>
+        </div>
+      </div>
+      <div class="top5">
+        <h3>🏆 Top 5 jugadores</h3>
+        <ol id="top5Menu"><li class="vacio">Sin registros aún</li></ol>
+      </div>
+    </div>
+    <div class="spacer"></div>
+  </div>
+
+  <!-- PAUSA -->
+  <div id="pausePanel" class="overlay hidden">
+    <div class="panel2">
+      <h2>⏸ Pausa</h2>
+      <p>Las bebés te esperan…</p>
+      <button id="btnResume" class="btn">▶ Reanudar</button>
+      <button id="btnRestart" class="btn">🔄 Reiniciar</button>
+      <button id="btnMenu" class="btn">🏠 Menú</button>
+    </div>
+  </div>
+
+  <!-- FINAL -->
+  <div id="endPanel" class="overlay hidden">
+    <div class="panel2">
+      <h2 id="endTitle">¡Ganaste!</h2>
+      <div class="endArt">
+        <img id="endImg1" src="assets/sprites/mica_celebrando.png" alt="Mica">
+        <img id="endImg2" src="assets/sprites/vale_celebrando.png" alt="Vale">
+      </div>
+      <p id="endMsg"></p>
+      <div id="endScore"></div>
+      <div id="endUser" class="hidden">
+        <div class="userChip"><img id="endAvatar" src="" alt=""><span class="uname" id="endName"></span></div>
+      </div>
+      <div id="saveBox">
+        <input id="playerName" maxlength="20" placeholder="Escribe tu nombre" autocomplete="off">
+        <button id="btnSave" class="btn" style="background:linear-gradient(180deg,#9d7bff,#6d3fe0)">💾 Guardar en el Top 5</button>
+        <button id="btnGoogleEnd" class="btn"><span class="gicon">G</span>Entra con Google para el Top 5 mundial</button>
+      </div>
+      <div class="top5" style="max-width:100%">
+        <h3>🏆 Top 5 jugadores</h3>
+        <ol id="top5End"><li class="vacio">Sin registros aún</li></ol>
+      </div>
+      <button id="btnAgain" class="btn" style="background:linear-gradient(180deg,#ff8ec9,#e0479a)">🔄 Jugar otra vez</button>
+      <button id="btnMenu2" class="btn" style="background:linear-gradient(180deg,#ffd36b,#eaa13c)">🏠 Menú</button>
+    </div>
+  </div>
+
+  <div id="hint" class="hidden"></div>
+</div>
+
+<script src="js/game.js?v=20261020b"></script>
+</body>
+</html>

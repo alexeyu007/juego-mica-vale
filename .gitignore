@@ -1,0 +1,14 @@
+# Archivos de sistema (no forman parte del proyecto)
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Entornos virtuales de Python (los scripts de tools/)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Dependencias de Node (por si se añade algún día)
+node_modules/
