@@ -102,7 +102,7 @@ const Vibra = (() => {
 
 // ---------- carga de assets ----------
 const IMG = {};
-const VER = '20261020j';
+const VER = '20261021c';
 const LISTA = {
   fondo: 'assets/fondo_hd.jpg',
   mica_normal: 'assets/sprites/mica_normal.png',
@@ -371,7 +371,10 @@ function pintarTop5(lista, ol) {
         const av = r.avatar
           ? `<img src="${esc(r.avatar)}" class="miniAv" alt="" onerror="this.style.display='none'">`
           : '';
-        return `<li><span class="celda">${med[i] || (i + 1) + '.'} ${av}${esc(r.nombre)}</span><span>${r.puntos} pts</span></li>`;
+        // el nombre va en .nom para que se recorte con "…" si es largo
+        // (si no, una fila por partida alargada desbarata el menú)
+        return `<li><span class="celda">${med[i] || (i + 1) + '.'} ${av}</span>` +
+               `<span class="nom">${esc(r.nombre)}</span><span>${r.puntos} pts</span></li>`;
       }).join('')
     : '<li class="vacio">Sin registros aún</li>';
 }
