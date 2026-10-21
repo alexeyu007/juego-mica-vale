@@ -151,8 +151,8 @@ function drawImg(name, x, y, w, h, opts = {}) {
 const SB_URL = 'https://aladtbjatyvnxuilzsug.supabase.co/rest/v1/';   // tu URL
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsYWR0YmphdHl2bnh1aWx6c3VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MzE3NDksImV4cCI6MjEwODEwNzc0OX0.G4IeZnnE0al3H05iv_Gab86QMmTD8HXpRcfRigVTP0U';                    // tu anon key
 // Mientras estén vacíos, el ranking funciona en "local" (solo en este navegador).
-const SB_URL = '';               // p.ej. 'https://abcdefghij.supabase.co'
-const SB_KEY = '';               // anon public key (empieza por eyJ...)
+//const SB_URL = '';               // p.ej. 'https://abcdefghij.supabase.co'
+//const SB_KEY = '';               // anon public key (empieza por eyJ...)
 const SB_ON  = !!(SB_URL && SB_KEY);
 
 const LS_TOP5 = 'mv_top5', LS_TOKEN = 'mv_token', LS_USER = 'mv_user';
