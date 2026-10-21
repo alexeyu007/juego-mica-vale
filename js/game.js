@@ -63,7 +63,7 @@ const Audio2 = {
 
 // ---------- carga de assets ----------
 const IMG = {};
-const VER = '20261020b';
+const VER = '20261020c';
 const LISTA = {
   fondo: 'assets/fondo_hd.jpg',
   mica_normal: 'assets/sprites/mica_normal.png',
@@ -153,7 +153,9 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 // Mientras estén vacíos, el ranking funciona en "local" (solo en este navegador).
 //const SB_URL = '';               // p.ej. 'https://abcdefghij.supabase.co'
 //const SB_KEY = '';               // anon public key (empieza por eyJ...)
-const SB_ON  = !!(SB_URL && SB_KEY);
+// Base del proyecto: tolera que pegues la URL con "/rest/v1/" o con barras sobrando.
+const SB_BASE = SB_URL.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/i, '');
+const SB_ON  = !!(SB_BASE && SB_KEY);
 
 const LS_TOP5 = 'mv_top5', LS_TOKEN = 'mv_token', LS_USER = 'mv_user';
 
@@ -163,7 +165,7 @@ let USUARIO = null;              // { id, nombre, avatar }
 function sbFetch(path, opts = {}) {
   // si hay sesión, se manda su token (necesario para que auth.uid() funcione)
   const tok = localStorage.getItem(LS_TOKEN);
-  return fetch(SB_URL + path, {
+  return fetch(SB_BASE + path, {
     ...opts,
     headers: {
       apikey: SB_KEY,
@@ -177,8 +179,12 @@ function sbFetch(path, opts = {}) {
 function entrarConGoogle() {
   if (!SB_ON) { alert('Configura Supabase (SB_URL y SB_KEY) en js/game.js para habilitar el login.'); return; }
   const aqui = location.origin + location.pathname;
-  // flujo implícito: Supabase vuelve a esta URL con #access_token=...
-  location.href = `${SB_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(aqui)}`;
+  // Al ser una redirección de navegador no viajan cabeceras: el apikey va en la URL.
+  location.href = `${SB_BASE}/auth/v1/authorize`
+    + `?provider=google`
+    + `&redirect_to=${encodeURIComponent(aqui)}`
+    + `&apikey=${encodeURIComponent(SB_KEY)}`
+    + `&scope=${encodeURIComponent('openid email profile')}`;
 }
 
 // recoge el token si volvimos de Google (#access_token=... en la URL)
@@ -196,7 +202,7 @@ async function cargarUsuario() {
   const tok = localStorage.getItem(LS_TOKEN);
   if (!SB_ON || !tok) { USUARIO = null; return null; }
   try {
-    const r = await fetch(SB_URL + '/auth/v1/user', {
+    const r = await fetch(SB_BASE + '/auth/v1/user', {
       headers: { apikey: SB_KEY, Authorization: 'Bearer ' + tok },
     });
     if (!r.ok) { localStorage.removeItem(LS_TOKEN); USUARIO = null; return null; }
