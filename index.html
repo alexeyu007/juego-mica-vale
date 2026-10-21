@@ -118,13 +118,17 @@
     object-fit:cover;flex:none;background:#eee}
   .top5 li.vacio{color:#a98bb5;justify-content:center;font-weight:600;font-size:14px}
   #saveBox{margin:10px 0 4px;display:flex;flex-direction:column;align-items:center;gap:8px}
-  #playerName{
-    font-family:inherit;font-weight:700;font-size:16px;text-align:center;
-    width:190px;padding:8px 12px;border-radius:999px;border:3px solid #ffb6dd;
-    color:#5b2a6b;outline:none;background:#fff;
+  .saved{
+    font-size:15px;font-weight:800;color:#1e9e6a;text-align:center;
+    background:#e9fbf3;border:2px solid #9ee7c7;border-radius:999px;
+    padding:7px 16px;max-width:100%;
   }
-  #playerName:focus{border-color:var(--pink)}
-  #btnSave{font-size:16px;padding:9px 20px}
+  .saved.local{color:#8a5a00;background:#fff6e2;border-color:#ffd79a}
+  #btnGoogleEnd{font-size:15px;padding:9px 18px;background:linear-gradient(180deg,#4f8dff,#2f6ae0);
+    display:flex;align-items:center;gap:9px}
+  #btnGoogleEnd .gicon{background:#fff;border-radius:50%;width:22px;height:22px;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-weight:800;color:#4285f4;font-size:13px;font-family:Arial,sans-serif}
 
   /* ---------- LOGIN GOOGLE ---------- */
   #loginBox{
@@ -191,7 +195,7 @@
         </div>
       </div>
       <div class="top5">
-        <h3>🏆 Top 5 jugadores</h3>
+        <h3 id="top5TitleMenu">🏆 Top 5 jugadores</h3>
         <ol id="top5Menu"><li class="vacio">Sin registros aún</li></ol>
       </div>
     </div>
@@ -223,12 +227,11 @@
         <div class="userChip"><img id="endAvatar" src="" alt=""><span class="uname" id="endName"></span></div>
       </div>
       <div id="saveBox">
-        <input id="playerName" maxlength="20" placeholder="Escribe tu nombre" autocomplete="off">
-        <button id="btnSave" class="btn" style="background:linear-gradient(180deg,#9d7bff,#6d3fe0)">💾 Guardar en el Top 5</button>
+        <div id="savedLine" class="saved"></div>
         <button id="btnGoogleEnd" class="btn"><span class="gicon">G</span>Entra con Google para el Top 5 mundial</button>
       </div>
       <div class="top5" style="max-width:100%">
-        <h3>🏆 Top 5 jugadores</h3>
+        <h3 id="top5TitleEnd">🏆 Top 5 jugadores</h3>
         <ol id="top5End"><li class="vacio">Sin registros aún</li></ol>
       </div>
       <button id="btnAgain" class="btn" style="background:linear-gradient(180deg,#ff8ec9,#e0479a)">🔄 Jugar otra vez</button>
@@ -239,6 +242,6 @@
   <div id="hint" class="hidden"></div>
 </div>
 
-<script src="js/game.js?v=20261020f"></script>
+<script src="js/game.js?v=20261020i"></script>
 </body>
 </html>

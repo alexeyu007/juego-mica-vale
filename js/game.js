@@ -63,7 +63,7 @@ const Audio2 = {
 
 // ---------- carga de assets ----------
 const IMG = {};
-const VER = '20261020f';
+const VER = '20261020i';
 const LISTA = {
   fondo: 'assets/fondo_hd.jpg',
   mica_normal: 'assets/sprites/mica_normal.png',
@@ -285,8 +285,12 @@ function salir() {
 }
 
 // ---------- TOP 5 ----------
+// Con sesión se muestra el ranking mundial; sin sesión, el local del dispositivo.
+// Así lo que se guarda siempre es visible en la lista.
+const esNube = () => SB_ON && !!USUARIO;
+
 async function top5Leer() {
-  if (SB_ON) {
+  if (esNube()) {
     try {
       const r = await sbFetch('/rest/v1/scores?select=nombre,avatar,puntos&order=puntos.desc&limit=5');
       if (r.ok) return await r.json();
@@ -303,7 +307,7 @@ async function top5Guardar(nombre, puntos) {
   l.sort((a, b) => b.puntos - a.puntos);
   localStorage.setItem(LS_TOP5, JSON.stringify(l.slice(0, 20)));
 
-  if (SB_ON && USUARIO) {           // guardado mundial, con el usuario de Google
+  if (esNube()) {                    // guardado mundial, con el usuario de Google
     try {
       const r = await sbFetch('/rest/v1/scores', {
         method: 'POST', headers: { Prefer: 'return=minimal' },
@@ -312,10 +316,10 @@ async function top5Guardar(nombre, puntos) {
           avatar: USUARIO.avatar, puntos,
         }),
       });
-      if (r.ok) return top5Leer();
+      if (r.ok) return { lista: await top5Leer(), subido: true };
     } catch (e) { /* sin red: se queda el respaldo local */ }
   }
-  return l.slice(0, 5);
+  return { lista: l.slice(0, 5), subido: false };
 }
 
 const esc = s => String(s == null ? '' : s).replace(/[<>&"']/g, c =>
@@ -334,6 +338,45 @@ function pintarTop5(lista, ol) {
 }
 async function refrescarTop5(ol) { pintarTop5(await top5Leer(), ol); }
 
+// ---------- GUARDADO AUTOMÁTICO ----------
+// Se dispara al terminar la partida: no hace falta pulsar ningún botón.
+let saveTexto = '', saveLocal = false, guardando = false;
+function pintarSave() {
+  const el = $('savedLine');
+  if (!el) return;
+  el.textContent = saveTexto;
+  el.classList.toggle('local', saveLocal);
+}
+
+async function autoGuardar() {
+  if (!S || S.guardado || guardando) return;
+  S.guardado = true; guardando = true;
+  saveTexto = '⏳ Guardando puntos…'; saveLocal = false; pintarSave();
+  try {
+    const puntos = S.score;
+    const nube = esNube();                               // solo se sube con sesión
+    const nombre = nube ? USUARIO.nombre
+                        : (localStorage.getItem('mv_nombre') || 'Jugador');
+    let lista, subido = false;
+    if (puntos > 0) {
+      localStorage.setItem('mv_nombre', nombre);
+      const g = await top5Guardar(nombre, puntos);       // nube si hay sesión, si no local
+      lista = g.lista; subido = g.subido;
+    } else {
+      lista = await top5Leer();
+    }
+    if (puntos <= 0) saveTexto = '¡Sin puntos esta vez! Vuelve a intentarlo 💪';
+    else if (subido) saveTexto = '✅ ¡' + puntos + ' pts en el Top 5 mundial como ' + nombre + '!';
+    else             saveTexto = '💾 ' + puntos + ' pts guardados en este dispositivo';
+    saveLocal = !subido;
+    pintarSave();
+    pintarTop5(lista, $('top5End'));
+    refrescarTop5($('top5Menu'));
+  } catch (e) {
+    saveTexto = '💾 Puntos guardados en este dispositivo'; saveLocal = true; pintarSave();
+  } finally { guardando = false; }
+}
+
 // pinta el estado de login (menú y pantalla final)
 function pintarUsuario() {
   const hay = !!USUARIO;
@@ -342,14 +385,15 @@ function pintarUsuario() {
   $('btnGoogle').classList.toggle('hidden', hay || !nubeDisponible);
   $('endUser').classList.toggle('hidden', !hay);
   $('btnGoogleEnd').classList.toggle('hidden', hay || !nubeDisponible);
-  $('playerName').classList.toggle('hidden', hay && nubeDisponible);
-  // se guarda en la nube si hay sesión; si no hay Supabase, se guarda en local con nombre
-  $('btnSave').classList.toggle('hidden', nubeDisponible && !hay);
+  // el título del ranking indica de dónde salen los datos
+  const titulo = hay ? '🏆 Top 5 mundial' : '🏆 Top 5 de este dispositivo';
+  const tm = $('top5TitleMenu'), te = $('top5TitleEnd');
+  if (tm) tm.textContent = titulo;
+  if (te) te.textContent = titulo;
   if (hay) {
     $('menuName').textContent = USUARIO.nombre;
     $('endName').textContent = USUARIO.nombre;
     if (USUARIO.avatar) { $('menuAvatar').src = USUARIO.avatar; $('endAvatar').src = USUARIO.avatar; }
-    $('playerName').value = USUARIO.nombre;
   }
 }
 
@@ -472,6 +516,7 @@ function finalizar(ganó) {
   if (S.fase !== 'playing') return;
   S.fase = ganó ? 'won' : 'lost';
   if (S.score > S.best) { S.best = S.score; localStorage.setItem('mv_best', S.best); }
+  autoGuardar();                     // guardado automático, sin pulsar nada
   if (ganó) { S.babys.forEach(b => b.cheer = 99); Audio2.win(); }
   else { S.babys.forEach(b => { b.hp = 0; }); Audio2.lose(); }
   setTimeout(() => mostrarFin(ganó), 900);
@@ -816,15 +861,10 @@ function mostrarFin(ganó) {
   $('endScore').textContent = 'Puntos: ' + S.score + (S.score >= S.best && S.score > 0 ? '  🏆 ¡Récord!' : '');
   $('endImg1').src = url(ganó ? 'mica_celebrando' : 'mica_enferma');
   $('endImg2').src = url(ganó ? 'vale_celebrando' : 'vale_enferma');
-  if (S.guardado) {
-    $('saveBox').classList.add('hidden');
-  } else {
-    $('saveBox').classList.remove('hidden');
-    $('btnSave').disabled = false;
-    $('btnSave').textContent = '💾 Guardar en el Top 5';
-    $('playerName').value = USUARIO ? USUARIO.nombre : (localStorage.getItem('mv_nombre') || '');
-    pintarUsuario();
-  }
+  $('saveBox').classList.remove('hidden');
+  if (!saveTexto) { saveTexto = '⏳ Guardando puntos…'; saveLocal = false; }
+  pintarSave();                     // lo confirmará autoGuardar() cuando acabe
+  pintarUsuario();
   endEl.classList.remove('hidden');
   refrescarTop5($('top5End'));
 }
@@ -846,20 +886,6 @@ $('btnSound').onclick = e => {
   Audio2.muted = !Audio2.muted;
   e.currentTarget.textContent = Audio2.muted ? '🔇' : '🔊';
 };
-$('btnSave').onclick = async () => {
-  const nombre = USUARIO ? USUARIO.nombre
-                         : $('playerName').value.trim().slice(0, 20);
-  if (!nombre) { $('playerName').focus(); return; }
-  localStorage.setItem('mv_nombre', nombre);
-  $('btnSave').disabled = true;
-  $('btnSave').textContent = '⏳ Guardando…';
-  const lista = await top5Guardar(nombre, S ? S.score : 0);
-  if (S) S.guardado = true;
-  pintarTop5(lista, $('top5End'));
-  refrescarTop5($('top5Menu'));
-  $('saveBox').classList.add('hidden');
-};
-$('playerName').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnSave').click(); });
 $('btnGoogle').onclick = entrarConGoogle;
 $('btnGoogleEnd').onclick = entrarConGoogle;
 $('btnLogout').onclick = salir;
