@@ -61,9 +61,48 @@ const Audio2 = {
   lose()  { [440, 370, 294, 220].forEach((f, i) => setTimeout(() => this.tone(f, .3, 'sawtooth', .13), i * 160)); },
 };
 
+// ---------- vibración (háptica) ----------
+// Solo se usa en dispositivos táctiles. Ojo: iOS (Safari/iPhone) NO implementa
+// navigator.vibrate, así que ahí el botón no aparece y no se intenta vibrar.
+const Vibra = (() => {
+  // ¿Estamos en un móvil/tablet? "pointer: coarse" = el puntero principal es el dedo.
+  // Es mucho más fiable que mirar el userAgent: los tablets y los portátiles táctiles
+  // con ratón quedan fuera porque su puntero primario sigue siendo fino.
+  let esMovil = false;
+  try { esMovil = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); }
+  catch (e) { esMovil = false; }
+  if (!esMovil && typeof navigator !== 'undefined' && !window.matchMedia) {
+    try { esMovil = navigator.maxTouchPoints > 1; } catch (e) {}   // respaldo muy antiguo
+  }
+
+  const soportado = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
+  let activo = localStorage.getItem('mv_vibra') !== '0';           // activada por defecto
+
+  // única salida al hardware, con todas las salvaguardas
+  const pulsa = pat => {
+    if (!esMovil || !soportado || !activo) return;
+    try { navigator.vibrate(pat); } catch (e) {}
+  };
+
+  return {
+    get esMovil()   { return esMovil; },
+    get soportado() { return soportado; },
+    get activo()    { return activo && esMovil && soportado; },
+    get util()      { return esMovil && soportado; },     // ¿merece enseñar el botón?
+    activar(v)      { activo = !!v; try { localStorage.setItem('mv_vibra', activo ? '1' : '0'); } catch (e) {} },
+
+    pop:    g   => pulsa(g ? 30 : 16),                    // virus pequeño / grande
+    golpe:  ()  => pulsa([0, 22]),                        // segundo golpe de un virus duro
+    hito:   ()  => pulsa([70, 45, 70]),                   // la bebé estornuda
+    premio: ()  => pulsa([12, 38, 12, 38, 24]),           // power-up recogido
+    gana:   ()  => pulsa([55, 50, 55, 50, 140]),          // victoria
+    pierde: ()  => pulsa([210, 80, 210]),                 // derrota
+  };
+})();
+
 // ---------- carga de assets ----------
 const IMG = {};
-const VER = '20261020i';
+const VER = '20261020j';
 const LISTA = {
   fondo: 'assets/fondo_hd.jpg',
   mica_normal: 'assets/sprites/mica_normal.png',
@@ -472,6 +511,7 @@ function pop(v, idx) {
   if (S.combo >= 3) S.txts.push({ txt: '¡Racha x' + mult + '!', x: W / 2, y: 300,
                 t: 0, dur: 1, col: '#ffe36b', big: true });
   (v.r > 40 ? Audio2.big : Audio2.pop).call(Audio2);
+  Vibra.pop(v.r > 40);                              // háptica al explotar el virus
   S.shake = Math.max(S.shake, v.r > 40 ? 6 : 3);
 }
 
@@ -482,12 +522,14 @@ function hitBaby(b) {
   S.fx.push({ img: 'fx_achis', x: b.x, y: BABY_Y + 8, t: 0, dur: .7, size: 165 });
   S.txts.push({ txt: '¡Achís!', x: b.x, y: 140, t: 0, dur: 1, col: '#ff6a6a', big: true });
   Audio2.hurt();
+  Vibra.hito();                                     // la bebé estornuda
   if (b.hp <= 0) finalizar(false);
 }
 
 function collect(p, idx) {
   S.pow.splice(idx, 1);
   Audio2.power();
+  Vibra.premio();                                   // power-up recogido
   if (p.key === 'patito') {
     S.txts.push({ txt: '¡Patito! +100', x: p.x, y: p.y, t: 0, dur: 1, col: '#ffd23f', big: false });
     S.score += 100;
@@ -517,8 +559,8 @@ function finalizar(ganó) {
   S.fase = ganó ? 'won' : 'lost';
   if (S.score > S.best) { S.best = S.score; localStorage.setItem('mv_best', S.best); }
   autoGuardar();                     // guardado automático, sin pulsar nada
-  if (ganó) { S.babys.forEach(b => b.cheer = 99); Audio2.win(); }
-  else { S.babys.forEach(b => { b.hp = 0; }); Audio2.lose(); }
+  if (ganó) { S.babys.forEach(b => b.cheer = 99); Audio2.win(); Vibra.gana(); }
+  else { S.babys.forEach(b => { b.hp = 0; }); Audio2.lose(); Vibra.pierde(); }
   setTimeout(() => mostrarFin(ganó), 900);
 }
 
@@ -805,7 +847,7 @@ function tap(x, y) {
     if (Math.hypot(x - s.x, y - s.y) < s.r + 22) {
       S.slime.splice(i, 1);
       S.fx.push({ img: 'fx_puf', x: s.x, y: s.y, t: 0, dur: .3, size: 70 });
-      S.score += 20; Audio2.pop();
+      S.score += 20; Audio2.pop(); Vibra.pop(false);
       return;
     }
   }
@@ -822,6 +864,7 @@ function tap(x, y) {
       S.fx.push({ img: 'fx_puf', x: v.x, y: v.y, t: 0, dur: .3, size: v.r * 2.6 });
       S.txts.push({ txt: '¡Otro golpe!', x: v.x, y: v.y - 12, t: 0, dur: .8, col: '#fff' });
       Audio2.pop();
+      Vibra.golpe();                                // doble golpe al virus duro
     } else pop(v, best);
     return;
   }
@@ -886,6 +929,17 @@ $('btnSound').onclick = e => {
   Audio2.muted = !Audio2.muted;
   e.currentTarget.textContent = Audio2.muted ? '🔇' : '🔊';
 };
+// vibración: el botón solo aparece en móvil con vibración real (Android/iOS con soporte)
+function pintarVibra() {
+  const b = $('btnVibra');
+  if (!b) return;
+  b.classList.toggle('hidden', !Vibra.util);
+  b.classList.toggle('off', !Vibra.activo);
+  b.textContent = Vibra.activo ? '📳' : '🔕';
+  b.title = Vibra.activo ? 'Vibración: activada' : 'Vibración: desactivada';
+}
+$('btnVibra').onclick = () => { Vibra.activar(!Vibra.activo); pintarVibra(); };
+pintarVibra();
 $('btnGoogle').onclick = entrarConGoogle;
 $('btnGoogleEnd').onclick = entrarConGoogle;
 $('btnLogout').onclick = salir;
@@ -932,6 +986,8 @@ window.MicaVale = {
   set: (o) => Object.assign(S, o),
   final: (win) => finalizar(win),
   finNow: (win) => { if (S && S.fase === 'playing') finalizar(win); mostrarFin(win); },
+  vibra: () => ({ movil: Vibra.esMovil, soportado: Vibra.soportado,
+                  activo: Vibra.activo, util: Vibra.util }),
 };
 
 cargar(async () => {

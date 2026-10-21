@@ -79,10 +79,12 @@
   #btnPlay:active{transform:translateY(4px) scale(.97)}
   @keyframes btnFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-7px) scale(1.03)}}
   @keyframes btnShine{0%{left:-70px}55%,100%{left:115%}}
-  #btnSound{
-    position:absolute;top:12px;right:12px;font-size:20px;padding:6px 14px;
+  #topBtns{position:absolute;top:12px;right:12px;display:flex;gap:8px}
+  #topBtns .btn{
+    font-size:20px;padding:6px 12px;
     background:rgba(255,255,255,.9);color:var(--purpleDark);box-shadow:0 4px 12px rgba(0,0,0,.25);
   }
+  #btnVibra.off{opacity:.4;filter:grayscale(1)}
   #bestLine{margin-top:8px;font-size:14px;font-weight:700;color:#a05bb0}
 
   /* ---------- PAUSA / FIN ---------- */
@@ -174,7 +176,10 @@
 
   <!-- MENÚ -->
   <div id="menu" class="overlay">
-    <button id="btnSound" class="btn" title="Sonido">🔊</button>
+    <div id="topBtns">
+      <button id="btnVibra" class="btn" title="Vibración">📳</button>
+      <button id="btnSound" class="btn" title="Sonido">🔊</button>
+    </div>
     <div class="spacer"></div>
     <div class="panel">
       <h1>Mica &amp; Vale<br><span>vs. El Resfrio</span></h1>
@@ -242,6 +247,6 @@
   <div id="hint" class="hidden"></div>
 </div>
 
-<script src="js/game.js?v=20261020i"></script>
+<script src="js/game.js?v=20261020j"></script>
 </body>
 </html>
