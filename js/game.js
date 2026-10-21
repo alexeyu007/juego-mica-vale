@@ -63,7 +63,7 @@ const Audio2 = {
 
 // ---------- carga de assets ----------
 const IMG = {};
-const VER = '20261020c';
+const VER = '20261020f';
 const LISTA = {
   fondo: 'assets/fondo_hd.jpg',
   mica_normal: 'assets/sprites/mica_normal.png',
@@ -162,9 +162,60 @@ const LS_TOP5 = 'mv_top5', LS_TOKEN = 'mv_token', LS_USER = 'mv_user';
 // ---------- LOGIN CON GOOGLE (Supabase Auth) ----------
 let USUARIO = null;              // { id, nombre, avatar }
 
-function sbFetch(path, opts = {}) {
+// ---------- Sesión (access_token + refresh_token) ----------
+function leerSesion() {
+  const raw = localStorage.getItem(LS_TOKEN);
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(raw);
+    if (d && d.access_token) return d;
+  } catch (e) { /* formato antiguo: guardábamos el token en bruto */ }
+  return { access_token: raw, refresh_token: '', expires_at: 0 };
+}
+const guardarSesion = d => localStorage.setItem(LS_TOKEN, JSON.stringify(d));
+const borrarSesion  = () => localStorage.removeItem(LS_TOKEN);
+
+// Devuelve un token vigente; lo renueva solo si está a punto de caducar.
+let renovando = null;
+function tokenValido() {
+  const s = leerSesion();
+  if (!s) return Promise.resolve(null);
+  const caduca = s.expires_at || 0;
+  if (!s.refresh_token || Date.now() < caduca - 60000) return Promise.resolve(s.access_token);
+  if (!renovando) {
+    renovando = (async () => {
+      try {
+        const r = await fetch(`${SB_BASE}/auth/v1/token?grant_type=refresh_token`, {
+          method: 'POST',
+          headers: { apikey: SB_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: s.refresh_token }),
+        });
+        if (!r.ok) {                    // refresh caducado: hay que volver a entrar
+          if (r.status === 400 || r.status === 401 || r.status === 403) {
+            borrarSesion(); localStorage.removeItem(LS_USER); USUARIO = null;
+            return null;                // token inútil: no mandar nada más
+          }
+          return s.access_token;        // error transitorio (p.ej. 500): seguimos
+        }
+        const d = await r.json();
+        const nueva = {
+          access_token: d.access_token,
+          refresh_token: d.refresh_token || s.refresh_token,
+          expires_at: Date.now() + (Number(d.expires_in) || 3600) * 1000,
+        };
+        guardarSesion(nueva);
+        return nueva.access_token;
+      } catch (e) {
+        return s.access_token;          // sin red: seguimos con el que tenemos
+      } finally { renovando = null; }
+    })();
+  }
+  return renovando;
+}
+
+async function sbFetch(path, opts = {}) {
   // si hay sesión, se manda su token (necesario para que auth.uid() funcione)
-  const tok = localStorage.getItem(LS_TOKEN);
+  const tok = await tokenValido();
   return fetch(SB_BASE + path, {
     ...opts,
     headers: {
@@ -192,20 +243,26 @@ async function procesarCallback() {
   const h = new URLSearchParams(location.hash.slice(1));
   const tok = h.get('access_token');
   if (!tok) return false;
-  localStorage.setItem(LS_TOKEN, tok);
+  guardarSesion({
+    access_token: tok,
+    refresh_token: h.get('refresh_token') || '',
+    expires_at: Date.now() + (Number(h.get('expires_in')) || 3600) * 1000,
+  });
   history.replaceState(null, '', location.pathname);   // limpia la URL
   await cargarUsuario();
   return true;
 }
 
 async function cargarUsuario() {
-  const tok = localStorage.getItem(LS_TOKEN);
-  if (!SB_ON || !tok) { USUARIO = null; return null; }
+  if (!SB_ON) { USUARIO = null; return null; }
+  const tok = await tokenValido();
+  if (!tok) { USUARIO = null; return null; }
   try {
     const r = await fetch(SB_BASE + '/auth/v1/user', {
       headers: { apikey: SB_KEY, Authorization: 'Bearer ' + tok },
     });
-    if (!r.ok) { localStorage.removeItem(LS_TOKEN); USUARIO = null; return null; }
+    if (r.status === 401 || r.status === 403) { borrarSesion(); localStorage.removeItem(LS_USER); USUARIO = null; return null; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);   // transitorio: usamos lo guardado
     const u = await r.json();
     const m = u.user_metadata || {};
     USUARIO = {
@@ -221,7 +278,7 @@ async function cargarUsuario() {
 }
 
 function salir() {
-  localStorage.removeItem(LS_TOKEN);
+  borrarSesion();
   localStorage.removeItem(LS_USER);
   USUARIO = null;
   pintarUsuario();
