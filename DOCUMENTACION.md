@@ -106,6 +106,20 @@ tiempo, y a partir del 50% salen dobles, y del 78% a veces triples.
 - `top5Guardar()` devuelve si la fila llegó a la nube, para no prometer una subida
   que falló.
 
+### ✨ Solo se guarda si mejoras tu marca
+
+La puntuación **solo se registra en el Top 5 si supera la mejor marca que ese
+jugador ya tenía**:
+
+- **Con sesión:** se consulta la fila más alta del jugador en Supabase
+  (`mejorDeJugador()`); si la nueva no la supera, no se inserta nada.
+- **Sin sesión:** se compara contra la marca local de ese nombre.
+- Cada jugador ocupa **una sola casilla** con su mejor puntuación: al mejorar, se
+  sustituye su registro anterior (en local se filtra por nombre; en el ranking
+  mundial `top5Leer()` agrupa por `user_id` y se queda con la fila más alta).
+- Si no mejora, la pantalla final avisa: *«🔒 X pts: no mejora tu mejor marca de
+  Y pts, el Top 5 no cambia»*.
+
 ---
 
 ## 🚀 Publicación (gratis)
@@ -205,4 +219,4 @@ MicaVale.vibra()          // estado de la vibración (móvil / soportado / activ
 
 ---
 
-*Última actualización: 21 de octubre de 2026 — versión de caché `?v=20261021f`*
+*Última actualización: 21 de octubre de 2026 — versión de caché `?v=20261021g`*

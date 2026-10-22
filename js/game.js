@@ -331,17 +331,49 @@ const esNube = () => SB_ON && !!USUARIO;
 async function top5Leer() {
   if (esNube()) {
     try {
-      const r = await sbFetch('/rest/v1/scores?select=nombre,avatar,puntos&order=puntos.desc&limit=5');
-      if (r.ok) return await r.json();
+      // pedimos más de 5 para poder agrupar: cada jugador, una sola fila (su mejor)
+      const r = await sbFetch('/rest/v1/scores?select=user_id,nombre,avatar,puntos&order=puntos.desc&limit=50');
+      if (r.ok) {
+        const filas = await r.json();
+        const vistos = new Set(), mejor = [];
+        for (const f of filas) {          // la lista viene ordenada: la primera de cada jugador es su mejor
+          const k = f.user_id || f.nombre;
+          if (vistos.has(k)) continue;
+          vistos.add(k); mejor.push(f);
+          if (mejor.length >= 5) break;
+        }
+        return mejor;
+      }
     } catch (e) { /* sin red: seguimos con local */ }
   }
-  try { return JSON.parse(localStorage.getItem(LS_TOP5) || '[]'); } catch (e) { return []; }
+  try { return JSON.parse(localStorage.getItem(LS_TOP5) || '[]').slice(0, 5); } catch (e) { return []; }
+}
+
+// Mejor puntuación ya registrada de un jugador.
+// Con sesión se mira en la nube (su fila más alta); sin ella, en la lista local.
+async function mejorDeJugador(nombre) {
+  if (esNube()) {
+    try {
+      const r = await sbFetch('/rest/v1/scores?select=puntos&user_id=eq.' + USUARIO.id +
+                              '&order=puntos.desc&limit=1');
+      if (r.ok) { const f = (await r.json())[0]; if (f) return +f.puntos || 0; }
+    } catch (e) { /* sin red: comparamos con lo local */ }
+  }
+  let l;
+  try { l = JSON.parse(localStorage.getItem(LS_TOP5) || '[]'); } catch (e) { l = []; }
+  return l.filter(f => f.nombre === nombre)
+          .reduce((m, f) => Math.max(m, +f.puntos || 0), 0);
 }
 
 async function top5Guardar(nombre, puntos) {
-  // respaldo local siempre
+  // Solo se actualiza el Top 5 si esta partida mejora la mejor marca del jugador
+  const mejor = await mejorDeJugador(nombre);
+  if (puntos <= mejor) return { lista: await top5Leer(), subido: false, noMejora: true, mejor };
+
+  // respaldo local siempre: un registro por jugador (su mejor marca)
   let l;
   try { l = JSON.parse(localStorage.getItem(LS_TOP5) || '[]'); } catch (e) { l = []; }
+  l = l.filter(f => f.nombre !== nombre);
   l.push({ nombre, puntos });
   l.sort((a, b) => b.puntos - a.puntos);
   localStorage.setItem(LS_TOP5, JSON.stringify(l.slice(0, 20)));
@@ -399,15 +431,17 @@ async function autoGuardar() {
     const nube = esNube();                               // solo se sube con sesión
     const nombre = nube ? USUARIO.nombre
                         : (localStorage.getItem('mv_nombre') || 'Jugador');
-    let lista, subido = false;
+    let lista, subido = false, noMejora = false, mejor = 0;
     if (puntos > 0) {
       localStorage.setItem('mv_nombre', nombre);
       const g = await top5Guardar(nombre, puntos);       // nube si hay sesión, si no local
       lista = g.lista; subido = g.subido;
+      noMejora = !!g.noMejora; mejor = g.mejor || 0;
     } else {
       lista = await top5Leer();
     }
     if (puntos <= 0) saveTexto = '¡Sin puntos esta vez! Vuelve a intentarlo 💪';
+    else if (noMejora) saveTexto = '🔒 ' + puntos + ' pts: no mejora tu mejor marca de ' + mejor + ' pts, el Top 5 no cambia';
     else if (subido) saveTexto = '✅ ¡' + puntos + ' pts en el Top 5 mundial como ' + nombre + '!';
     else             saveTexto = '💾 ' + puntos + ' pts guardados en este dispositivo';
     saveLocal = !subido;
