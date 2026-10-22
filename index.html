@@ -40,15 +40,14 @@
     padding-top:10px;padding-bottom:16px;
   }
   /* La portada es la propia pantalla inicial (título y botón pintados en la imagen) */
-  #menu{background:url('Arte/pantalla_inicial.png?v=20261021e') center 50%/auto 100% no-repeat,#ffd7ec;
-    background-position:calc(50% + 30px) center}
+  #menu{background:url('Arte/pantalla_inicial.png?v=20261021e') center center/auto 100% no-repeat,#ffd7ec}
   #menu .spacer{display:none}
   #menu .panel{display:none}
   #menu h1,#menu p,#menu .howto{display:none}
   /* el botón JUGAR real: transparente, apoyado sobre el play ya pintado de la portada
      (posición medida sobre Arte/pantalla_inicial.png: centro 40.4% X, 74.4% Y) */
   #btnPlay{
-    position:absolute;left:calc(50% - 10px);top:74.4%;transform:translate(-50%,-50%);
+    position:absolute;left:40.4%;top:74.4%;transform:translate(-50%,-50%);
     width:46%;height:13%;padding:0;border:none;background:transparent;
     box-shadow:none;border-radius:999px;cursor:pointer;z-index:3;
     transition:transform .1s ease;
