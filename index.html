@@ -39,29 +39,23 @@
     justify-content:flex-start;             /* manda el flex, no el centrado */
     padding-top:10px;padding-bottom:16px;
   }
-  /* El hueco lo reparten los espacios: la tarjeta respira y JUGAR baja al pie.
-     Si no cabe todo, la tarjeta se comprime (y hace scroll) en vez de pisar el botón.
-     Así funciona igual en cualquier pantalla, que el escenario cambia de tamaño. */
-  #menu .spacer{flex:1 1 0;min-height:0}
-  #menu .spacerPie{flex:1.7 1 0}
-  /* tarjeta de cristal esmerilado: el fondo se ve pasar por detrás */
-  #menu .panel{
-    background:rgba(255,255,255,.50);
-    backdrop-filter:blur(14px) saturate(1.25);
-    -webkit-backdrop-filter:blur(14px) saturate(1.25);
-    border-radius:24px;padding:12px 18px;
-    box-shadow:0 8px 28px rgba(60,10,60,.30),inset 0 1px 0 rgba(255,255,255,.75);
-    max-width:390px;
-    max-height:100%;min-height:0;overflow-y:auto;overscroll-behavior:contain;
-    border:2px solid rgba(255,255,255,.7);
+  /* La portada es la propia pantalla inicial (título y botón pintados en la imagen) */
+  #menu{background:url('Arte/pantalla_inicial.png?v=20261021e') center 50%/auto 100% no-repeat,#ffd7ec;
+    background-position:calc(50% + 30px) center}
+  #menu .spacer{display:none}
+  #menu .panel{display:none}
+  #menu h1,#menu p,#menu .howto{display:none}
+  /* el botón JUGAR real: transparente, apoyado sobre el play ya pintado de la portada
+     (posición medida sobre Arte/pantalla_inicial.png: centro 40.4% X, 74.4% Y) */
+  #btnPlay{
+    position:absolute;left:calc(50% - 10px);top:74.4%;transform:translate(-50%,-50%);
+    width:46%;height:13%;padding:0;border:none;background:transparent;
+    box-shadow:none;border-radius:999px;cursor:pointer;z-index:3;
+    transition:transform .1s ease;
   }
-  #menu h1{font-size:30px;line-height:1.05;color:var(--pinkDark);text-shadow:0 2px 0 #fff}
-  #menu h1 span{color:var(--purpleDark)}
-  #menu p{font-size:15px;margin-top:6px;font-weight:600;text-shadow:0 1px 3px rgba(255,255,255,.9)}
-  #menu .howto{font-size:13.5px;margin-top:8px;color:#7a4a86;font-weight:600;
-    text-shadow:0 1px 3px rgba(255,255,255,.9)}
-  /* la lista respira sola: nunca empuja la tarjeta contra el botón JUGAR */
-  #menu .top5 ol{max-height:104px;overflow-y:auto;overscroll-behavior:contain}
+  #btnPlay .btnArt,#btnPlay img,#btnPlay .btnLabel{display:none}
+  #btnPlay:hover{transform:translate(-50%,-50%) scale(1.04)}
+  #btnPlay:active{transform:translate(-50%,-50%) scale(.96)}
   .btn{
     font-family:inherit;font-weight:800;cursor:pointer;border:none;
     border-radius:999px;color:#fff;letter-spacing:.5px;
@@ -69,43 +63,41 @@
     transition:transform .08s ease,box-shadow .08s ease;
   }
   .btn:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
-  /* el botón JUGAR va en el flujo, centrado y pegado al pie, sobre el fondo */
-  #playBox{flex:none;margin-top:14px;z-index:3}
-  #btnPlay{
-    position:relative;padding:0;border:none;background:none;
-    box-shadow:none;border-radius:0;overflow:visible;
-    animation:btnFloat 2.2s ease-in-out infinite;
-    transition:transform .12s ease;
-  }
-  #btnPlay .btnArt{display:block;position:relative;line-height:0}
-  #btnPlay img{
-    display:block;width:212px;height:auto;
-    filter:drop-shadow(0 8px 16px rgba(200,40,120,.45));
-  }
-  #btnPlay .btnLabel{
-    position:absolute;left:0;right:0;top:50%;transform:translateY(-54%);
-    font-size:29px;font-weight:800;color:#fff;letter-spacing:1px;
-    text-shadow:0 2px 0 rgba(190,30,100,.55),0 0 12px rgba(255,255,255,.35);
-    pointer-events:none;
-  }
-  /* barrido de brillo sobre el botón */
-  #btnPlay .btnArt::after{
-    content:"";position:absolute;top:-10%;bottom:-10%;width:46px;left:-70px;
-    background:linear-gradient(105deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.75) 50%,rgba(255,255,255,0) 100%);
-    transform:rotate(12deg);animation:btnShine 2.6s ease-in-out infinite;pointer-events:none;
-  }
-  #btnPlay:hover{transform:scale(1.07)}
-  #btnPlay:active{transform:translateY(4px) scale(.97)}
-  @keyframes btnFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-7px) scale(1.03)}}
-  @keyframes btnShine{0%{left:-70px}55%,100%{left:115%}}
-  #topBtns{position:absolute;top:12px;right:12px;display:flex;gap:8px}
+  #topBtns{position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:4}
   #topBtns .btn{
     font-size:20px;padding:6px 12px;
     background:rgba(255,255,255,.9);color:var(--purpleDark);box-shadow:0 4px 12px rgba(0,0,0,.25);
   }
   #btnVibra.off{opacity:.4;filter:grayscale(1)}
-  #bestLine{margin-top:8px;font-size:14px;font-weight:700;color:#a05bb0;
-    text-shadow:0 1px 3px rgba(255,255,255,.9)}
+  /* abajo a la izquierda: entrar con Google (conserva sus estados) */
+  #loginBox{position:absolute;left:12px;bottom:12px;z-index:5;
+    background:rgba(255,255,255,.92);border:3px solid #cfe0ff;border-radius:18px;
+    padding:8px 10px;display:flex;flex-direction:column;gap:6px;align-items:center;
+    width:auto;max-width:46%}
+  #loginBox .lbl{display:none}
+  #btnGoogle{
+    font-size:14px;padding:8px 14px;background:linear-gradient(180deg,#4f8dff,#2f6ae0);
+    display:flex;align-items:center;gap:7px;
+  }
+  #btnGoogle .gicon{
+    background:#fff;border-radius:50%;width:21px;height:21px;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-weight:800;color:#4285f4;font-size:13px;font-family:Arial,sans-serif;
+  }
+  /* abajo a la derecha: trofeo del Top 5 */
+  #btnTrofeo{
+    position:absolute;right:12px;bottom:12px;font-size:20px;padding:6px 12px;
+    background:rgba(255,255,255,.9);color:var(--purpleDark);
+    box-shadow:0 4px 12px rgba(0,0,0,.25);z-index:4;
+  }
+  #bestLine{margin-top:6px;font-size:13px;font-weight:700;color:#a05bb0;text-align:center}
+  /* panel que se abre desde el trofeo */
+  #top5Panel{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:5;max-width:78%;max-height:38%;
+    background:rgba(255,255,255,.94);border:3px solid #ffb6dd;border-radius:18px;
+    padding:10px 14px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #top5Panel .top5{background:none;border:none;padding:0;margin:0;max-width:none;width:100%}
+  #top5Panel .top5 h3{font-size:15px}
+  #top5Panel .top5 ol{max-height:110px;overflow-y:auto;overscroll-behavior:contain}
 
   /* ---------- PAUSA / FIN ---------- */
   .panel2{
@@ -153,21 +145,6 @@
     font-weight:800;color:#4285f4;font-size:13px;font-family:Arial,sans-serif}
 
   /* ---------- LOGIN GOOGLE ---------- */
-  #loginBox{
-    display:flex;flex-direction:column;align-items:center;gap:8px;
-    background:rgba(255,255,255,.92);border:3px solid #cfe0ff;border-radius:18px;
-    padding:10px 14px;margin-top:6px;max-width:330px;width:100%;
-  }
-  #loginBox .lbl{font-size:13px;font-weight:700;color:#7a4a86}
-  #btnGoogle{
-    font-size:15px;padding:9px 18px;background:linear-gradient(180deg,#4f8dff,#2f6ae0);
-    display:flex;align-items:center;gap:9px;
-  }
-  #btnGoogle .gicon{
-    background:#fff;border-radius:50%;width:22px;height:22px;
-    display:inline-flex;align-items:center;justify-content:center;
-    font-weight:800;color:#4285f4;font-size:13px;font-family:Arial,sans-serif;
-  }
   .userChip{
     display:flex;align-items:center;gap:9px;background:#eef4ff;
     border-radius:999px;padding:5px 12px 5px 5px;max-width:100%;
@@ -194,38 +171,35 @@
 <div id="stage">
   <canvas id="game"></canvas>
 
-  <!-- MENÚ -->
+  <!-- MENÚ: portada pantalla_inicial.png -->
   <div id="menu" class="overlay">
     <div id="topBtns">
       <button id="btnVibra" class="btn" title="Vibración">📳</button>
       <button id="btnSound" class="btn" title="Sonido">🔊</button>
     </div>
-    <div class="spacer"></div>
-    <div class="panel">
-      <h1>Mica &amp; Vale<br><span>vs. El Resfrio</span></h1>
-      <p>¡Toca los virus antes de que lleguen a la cuna!</p>
-      <div class="howto">Si llegan, las bebés se debilitan… y al final ¡se resfrían!<br>
-      Aguanta <b>60 segundos</b> sanas y salvas para ganar. 🛟</div>
-      <div id="bestLine"></div>
-      <div id="loginBox">
-        <span class="lbl">Entra con tu Google y compite en el Top 5 mundial 👇</span>
-        <button id="btnGoogle" class="btn"><span class="gicon">G</span>Entrar con Google</button>
-        <div id="userChipBox" class="hidden" style="display:flex;align-items:center;gap:8px">
-          <div class="userChip"><img id="menuAvatar" src="" alt=""><span class="uname" id="menuName"></span></div>
-          <button id="btnLogout" class="btn">Salir</button>
-        </div>
+
+    <!-- botón real: transparente sobre el play pintado de la portada -->
+    <button id="btnPlay" class="btn" aria-label="Jugar"></button>
+
+    <!-- abajo a la izquierda: entrar con Google -->
+    <div id="loginBox">
+      <button id="btnGoogle" class="btn"><span class="gicon">G</span>Google</button>
+      <div id="userChipBox" class="hidden" style="align-items:center;gap:6px">
+        <div class="userChip"><img id="menuAvatar" src="" alt=""><span class="uname" id="menuName"></span></div>
+        <button id="btnLogout" class="btn">Salir</button>
       </div>
+    </div>
+
+    <!-- abajo a la derecha: trofeo del Top 5 (abre la lista) -->
+    <button id="btnTrofeo" class="btn" aria-label="Top 5">🏆</button>
+
+    <!-- panel del Top 5 -->
+    <div id="top5Panel" class="hidden">
       <div class="top5">
         <h3 id="top5TitleMenu">🏆 Top 5 jugadores</h3>
         <ol id="top5Menu"><li class="vacio">Sin registros aún</li></ol>
+        <div id="bestLine"></div>
       </div>
-    </div>
-    <div class="spacer spacerPie"></div>
-    <div id="playBox">
-      <button id="btnPlay" class="btn" aria-label="Jugar">
-        <span class="btnArt"><img src="assets/sprites/btn_play.png?v=20261019" alt=""></span>
-        <span class="btnLabel">JUGAR</span>
-      </button>
     </div>
   </div>
 
@@ -269,6 +243,6 @@
   <div id="hint" class="hidden"></div>
 </div>
 
-<script src="js/game.js?v=20261021c"></script>
+<script src="js/game.js?v=20261021f"></script>
 </body>
 </html>

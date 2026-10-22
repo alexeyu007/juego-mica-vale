@@ -102,7 +102,7 @@ const Vibra = (() => {
 
 // ---------- carga de assets ----------
 const IMG = {};
-const VER = '20261021c';
+const VER = '20261021d';
 const LISTA = {
   fondo: 'assets/fondo_hd.jpg',
   mica_normal: 'assets/sprites/mica_normal.png',
@@ -726,6 +726,14 @@ function dibujarVirus() {
   });
 }
 
+// Pinta sólo el fondo. Se usa en el menú, donde no hay partida: si no,
+// el lienzo queda transparente y se ve el morado de la página en vez del cuarto.
+function dibujarFondo() {
+  ctx.clearRect(0, 0, W, H);
+  if (!fondoOff || fondoOff.width !== Math.round(W * RATIO)) prepararFondo();
+  ctx.drawImage(fondoOff, 0, 0, W, H);
+}
+
 function dibujarTodo() {
   ctx.clearRect(0, 0, W, H);
   ctx.save();
@@ -895,8 +903,6 @@ function irMenu() {
   pauseEl.classList.add('hidden');
   endEl.classList.add('hidden');
   menuEl.classList.remove('hidden');
-  $('bestLine').textContent = S && S.best ? '🏆 Mejor puntuación: ' + S.best : '';
-  refrescarTop5($('top5Menu'));
   S = null;
 }
 function mostrarFin(ganó) {
@@ -919,9 +925,18 @@ $('btnPlay').onclick = () => {
   Audio2.init();
   menuEl.classList.add('hidden');
   endEl.classList.add('hidden');
+  cerrarTop5();
   nuevoJuego();
-  mostrarHint('¡Toca los virus antes de que suban a la cuna! 🛟', 3200);
+  // mensaje de bienvenida: se ve 5 s y recién entonces empieza la partida
+  S.fase = 'intro';
+  mostrarHint('¡Toca los virus antes de que suban a la cuna! 🛟', 5000);
+  clearTimeout(introTimer);
+  introTimer = setTimeout(() => { if (S && S.fase === 'intro') S.fase = 'playing'; }, 5000);
 };
+// el trofeo abre/cierra el Top 5
+$('btnTrofeo').onclick = e => { e.stopPropagation(); alternarTop5(); };
+$('top5Panel').onclick = e => e.stopPropagation();
+document.addEventListener('click', () => cerrarTop5());
 $('btnResume').onclick = reanudar;
 $('btnRestart').onclick = () => { pauseEl.classList.add('hidden'); nuevoJuego(); };
 $('btnMenu').onclick = irMenu;
@@ -953,6 +968,7 @@ document.addEventListener('keydown', e => {
 });
 
 let hintTimer = null;
+let introTimer = null;
 function mostrarHint(txt, ms) {
   hintEl.textContent = txt;
   hintEl.classList.remove('hidden');
@@ -960,6 +976,14 @@ function mostrarHint(txt, ms) {
   clearTimeout(hintTimer);
   hintTimer = setTimeout(() => { hintEl.style.opacity = 0; }, ms);
 }
+
+// ---------- intro del juego y panel del Top 5 ----------
+function alternarTop5() {
+  const p = $('top5Panel');
+  if (p.classList.contains('hidden')) { p.classList.remove('hidden'); refrescarTop5($('top5Menu')); }
+  else p.classList.add('hidden');
+}
+function cerrarTop5() { $('top5Panel').classList.add('hidden'); }
 
 // ---------- pausa automática al ocultar la pestaña ----------
 // Evita que las bebés "se resfríen" en segundo plano mientras el jugador mira otra cosa.
@@ -973,10 +997,8 @@ let last = performance.now();
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
-  if (S) {
-    update(dt);
-    dibujarTodo();
-  }
+  if (S) { update(dt); dibujarTodo(); }
+  else dibujarFondo();          // sin partida: el menú se ve sobre el fondo del juego
   requestAnimationFrame(loop);
 }
 
