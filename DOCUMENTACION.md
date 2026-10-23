@@ -83,6 +83,31 @@ tiempo, y a partir del 50% salen dobles, y del 78% a veces triples.
 
 ---
 
+## 📱 Modo móvil: a pantalla completa
+
+- **Detección de móvil:** `matchMedia('(pointer: coarse)')` (el puntero principal es
+  el dedo), con `navigator.maxTouchPoints > 1` como respaldo en navegadores antiguos.
+  Es más fiable que mirar el userAgent: los portátiles táctiles con ratón quedan fuera.
+  Para **previsualizar en PC** se fuerza con `?movil=1` en la URL.
+- **El lienzo llena el viewport:** `fit()` calcula `s = min(vw/480, vh/800)` (el campo
+  entero siempre visible), fija el área lógica visible a `VW = vw/s`, `VH = vh/s` y
+  centra el campo 480×800 con `OFFX/OFFY`. El cuarto se **extiende por encima y por
+  debajo** del campo (o a los lados en apaisado) para cubrir toda la pantalla.
+- **El fondo cubre todo el lienzo:** `prepararFondo()` escala la imagen para cubrir
+  `VW×VH` y, en móvil, recorta la posición para no dejar ningún hueco. En PC el
+  encuadre es exactamente el de siempre (`OFFX = OFFY = 0`).
+- **Sin redondeos ni sombra:** la clase `#stage.full` (junto a `html.movil` y
+  `body.movil`, que sólo pone JS en móvil) quita `border-radius` y `box-shadow`, usa
+  `100dvh` y añade `env(safe-area-inset-*)` para que el notch y la barra inferior no
+  tapen los botones de esquina.
+- **Los toques se traducen bien:** `coords()` pasa del píxel de pantalla al lógico
+  restando `OFFX/OFFY`, así que tocar el botón de pausa en el extremo funciona igual.
+- El área de clic de JUGAR se coloca por JS (`ajustarBtnPlay()`) sobre el play
+  pintado usando la misma escala que el CSS (`auto 100%`: altura al 100%, ancho a su
+  proporción), así queda alineada en cualquier tamaño de pantalla.
+
+---
+
 ## 🎨 Controles, sonido y vibración
 
 - **Pulsar virus** con el ratón o el dedo. La pausa se activa con `Esc` / `P`.

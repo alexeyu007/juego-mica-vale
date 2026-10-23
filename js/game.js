@@ -15,23 +15,77 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const stage = document.getElementById('stage');
 let RATIO = 1;                 // píxeles reales por píxel lógico (nitidez)
+let VW = W, VH = H;            // área lógica visible (en móvil supera el campo)
+let OFFX = 0, OFFY = 0;        // desplazamiento del campo dentro del lienzo
+
+// ¿Móvil/tablet? "pointer: coarse" = el puntero principal es el dedo. Es mucho más
+// fiable que mirar el userAgent: los táctiles con ratón quedan fuera porque su
+// puntero primario sigue siendo fino. ?movil=1 lo fuerza para previsualizar en PC.
+let esMovil = false;
+try { esMovil = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); }
+catch (e) { esMovil = false; }
+if (!esMovil && typeof navigator !== 'undefined' && !window.matchMedia) {
+  try { esMovil = navigator.maxTouchPoints > 1; } catch (e) {}   // respaldo muy antiguo
+}
+if (/[?&]movil=1/.test(location.search)) esMovil = true;
+
+// El botón de jugar viene pintado en la portada: aquí colocamos el área de clic
+// justo encima de ese pintado, sea cual sea el tamaño de la pantalla.
+const portada = new Image();
+portada.src = 'Arte/pantalla_inicial.png?v=20261021e';
+const PLAY_PINTADO = { cx: .4043, cy: .7442, w: .454, h: .2133 };   // medido sobre el PNG
+function ajustarBtnPlay() {
+  const menu = document.getElementById('menu'), btn = document.getElementById('btnPlay');
+  if (!menu || !btn || !portada.naturalWidth) return;
+  const mw = menu.clientWidth, mh = menu.clientHeight;
+  // la portada se pinta con "background-size:auto 100%" (altura al 100%, ancho a
+  // su proporción), así que la escala es la de la altura: así el área de clic
+  // queda siempre sobre el play pintado, sea cual sea el tamaño de la pantalla.
+  const esc = mh / portada.naturalHeight;
+  const iw = portada.naturalWidth * esc, ih = portada.naturalHeight * esc;
+  const ox = (mw - iw) / 2, oy = (mh - ih) / 2;                                  // centrada
+  btn.style.left = (ox + PLAY_PINTADO.cx * iw) + 'px';
+  btn.style.top = (oy + PLAY_PINTADO.cy * ih) + 'px';
+  btn.style.width = (PLAY_PINTADO.w * iw) + 'px';
+  btn.style.height = (PLAY_PINTADO.h * ih) + 'px';
+}
+portada.onload = ajustarBtnPlay;
 
 function fit() {
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const s = Math.min(window.innerWidth / W, window.innerHeight / H) * 0.98;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let s;
+  if (esMovil) {
+    // El juego ocupa toda la pantalla del navegador: el lienzo llena el viewport
+    // y el cuarto se extiende por encima y por debajo del campo de juego.
+    s = Math.min(vw / W, vh / H);                 // el campo entero siempre visible
+    VW = vw / s; VH = vh / s;
+    OFFX = (VW - W) / 2; OFFY = (VH - H) / 2;
+  } else {
+    s = Math.min(vw / W, vh / H) * 0.98;          // PC: tarjeta centrada con su margen
+    VW = W; VH = H; OFFX = 0; OFFY = 0;
+  }
   // el buffer del lienzo se hace igual al tamaño CSS real: así no hay reescalado
   RATIO = Math.min(dpr * s, 3);
-  canvas.width = Math.round(W * RATIO);
-  canvas.height = Math.round(H * RATIO);
-  ctx.setTransform(RATIO, 0, 0, RATIO, 0, 0);
+  canvas.width = Math.round(VW * RATIO);
+  canvas.height = Math.round(VH * RATIO);
+  ctx.setTransform(RATIO, 0, 0, RATIO, OFFX * RATIO, OFFY * RATIO);
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
-  canvas.style.width = (W * s) + 'px';
-  canvas.style.height = (H * s) + 'px';
-  stage.style.width = (W * s) + 'px';
-  stage.style.height = (H * s) + 'px';
+  const cw = VW * s, ch = VH * s;                 // en móvil coincide con el viewport
+  canvas.style.width = cw + 'px';
+  canvas.style.height = ch + 'px';
+  stage.style.width = cw + 'px';
+  stage.style.height = ch + 'px';
+  stage.classList.toggle('full', esMovil);
+  // la clase .movil habilita el CSS de pantalla completa (alto 100dvh y
+  // safe-areas); sin ella el CSS de escritorio sigue intacto
+  document.documentElement.classList.toggle('movil', esMovil);
+  document.body.classList.toggle('movil', esMovil);
+  ajustarBtnPlay();
 }
 window.addEventListener('resize', fit);
+window.addEventListener('orientationchange', fit);
 fit();
 
 // ---------- audio (sintetizado, sin archivos) ----------
@@ -65,16 +119,8 @@ const Audio2 = {
 // Solo se usa en dispositivos táctiles. Ojo: iOS (Safari/iPhone) NO implementa
 // navigator.vibrate, así que ahí el botón no aparece y no se intenta vibrar.
 const Vibra = (() => {
-  // ¿Estamos en un móvil/tablet? "pointer: coarse" = el puntero principal es el dedo.
-  // Es mucho más fiable que mirar el userAgent: los tablets y los portátiles táctiles
-  // con ratón quedan fuera porque su puntero primario sigue siendo fino.
-  let esMovil = false;
-  try { esMovil = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); }
-  catch (e) { esMovil = false; }
-  if (!esMovil && typeof navigator !== 'undefined' && !window.matchMedia) {
-    try { esMovil = navigator.maxTouchPoints > 1; } catch (e) {}   // respaldo muy antiguo
-  }
-
+  // La detección de móvil (esMovil) es global: la comparte con el modo
+  // pantalla completa, así que aquí no se vuelve a calcular.
   const soportado = typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
   let activo = localStorage.getItem('mv_vibra') !== '0';           // activada por defecto
 
@@ -684,21 +730,35 @@ function update(dt) {
 let fondoOff = null;
 function prepararFondo() {
   fondoOff = document.createElement('canvas');
-  fondoOff.width = Math.round(W * RATIO);
-  fondoOff.height = Math.round(H * RATIO);
+  fondoOff.width = Math.round(VW * RATIO);
+  fondoOff.height = Math.round(VH * RATIO);
   const c = fondoOff.getContext('2d');
   c.setTransform(RATIO, 0, 0, RATIO, 0, 0);
   c.imageSmoothingEnabled = true;
   c.imageSmoothingQuality = 'high';
   const im = IMG.fondo;
-  const sc = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+  // Se escala para cubrir toda el área visible. El anclaje sigue midiéndose
+  // desde el campo (OFFX/OFFY = 0 en PC), así que en PC el encuadre es el
+  // mismo de siempre y en móvil sólo se descubre más cuarto arriba y abajo.
+  const sc = Math.max(VW / im.naturalWidth, VH / im.naturalHeight);
   const dw = im.naturalWidth * sc, dh = im.naturalHeight * sc;
-  c.drawImage(im, (W - dw) / 2, 150 - 290 * sc, dw, dh);
-  // desvanecido suave arriba
-  const g = c.createLinearGradient(0, 0, 0, 240);
-  g.addColorStop(0, 'rgba(255,235,250,.92)');
+  let ix = OFFX + (W - dw) / 2, iy = OFFY + 150 - 290 * sc;
+  if (VW > W || VH > H) {                       // móvil: nunca dejar hueco alrededor
+    ix = Math.min(Math.max(ix, VW - dw), 0);
+    iy = Math.min(Math.max(iy, VH - dh), 0);
+  }
+  c.drawImage(im, ix, iy, dw, dh);
+  // desvanecido suave arriba (la banda extendida se funde con el campo)
+  const top = OFFY;
+  const g = c.createLinearGradient(0, 0, 0, top + 240);
+  if (top > 0) {
+    g.addColorStop(0, 'rgba(255,235,250,0)');
+    g.addColorStop(top / (top + 240), 'rgba(255,235,250,.92)');
+  } else {
+    g.addColorStop(0, 'rgba(255,235,250,.92)');
+  }
   g.addColorStop(1, 'rgba(255,235,250,0)');
-  c.fillStyle = g; c.fillRect(0, 0, W, 240);
+  c.fillStyle = g; c.fillRect(0, 0, VW, top + 240);
 }
 
 function exprBaby(b) {
@@ -762,19 +822,24 @@ function dibujarVirus() {
 
 // Pinta sólo el fondo. Se usa en el menú, donde no hay partida: si no,
 // el lienzo queda transparente y se ve el morado de la página en vez del cuarto.
+function fondoListo() {
+  return fondoOff &&
+         fondoOff.width === Math.round(VW * RATIO) &&
+         fondoOff.height === Math.round(VH * RATIO);
+}
 function dibujarFondo() {
-  ctx.clearRect(0, 0, W, H);
-  if (!fondoOff || fondoOff.width !== Math.round(W * RATIO)) prepararFondo();
-  ctx.drawImage(fondoOff, 0, 0, W, H);
+  ctx.clearRect(-OFFX, -OFFY, VW, VH);
+  if (!fondoListo()) prepararFondo();
+  ctx.drawImage(fondoOff, -OFFX, -OFFY, VW, VH);
 }
 
 function dibujarTodo() {
-  ctx.clearRect(0, 0, W, H);
+  ctx.clearRect(-OFFX, -OFFY, VW, VH);
   ctx.save();
   if (S.shake > 0) ctx.translate(rnd(-S.shake, S.shake), rnd(-S.shake, S.shake));
 
-  if (!fondoOff || fondoOff.width !== Math.round(W * RATIO)) prepararFondo();
-  ctx.drawImage(fondoOff, 0, 0, W, H);
+  if (!fondoListo()) prepararFondo();
+  ctx.drawImage(fondoOff, -OFFX, -OFFY, VW, VH);
 
   dibujarBebes();
   dibujarCuna();
@@ -826,7 +891,7 @@ function dibujarTodo() {
 
   if (S.flash > 0) {
     ctx.fillStyle = `rgba(255,60,90,${S.flash * .35})`;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(-OFFX, -OFFY, VW, VH);
   }
 }
 
@@ -872,7 +937,8 @@ function coords(e) {
   const r = canvas.getBoundingClientRect();
   const cx = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
   const cy = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-  return { x: cx * W / r.width, y: cy * H / r.height };
+  // ojo: el lienzo cubre toda el área visible (VW×VH), no sólo el campo
+  return { x: cx * VW / r.width - OFFX, y: cy * VH / r.height - OFFY };
 }
 
 function tap(x, y) {

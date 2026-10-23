@@ -24,6 +24,23 @@
   #stage{position:relative;box-shadow:0 20px 60px rgba(0,0,0,.6);border-radius:22px;overflow:hidden}
   canvas{display:block;border-radius:22px}
 
+  /* ---------- modo móvil: a pantalla completa ---------- */
+  /* El escenario pasa a ocupar todo el viewport (barra del navegador incluida,
+     con 100dvh de respaldo) y pierde redondeos y sombra: es el borde del móvil.
+     La clase .movil la pone JS sólo cuando detecta móvil, así PC no cambia. */
+  html.movil,body.movil{height:100vh;height:100dvh}
+  #stage.full{
+    width:100%;height:100vh;height:100dvh;
+    border-radius:0;box-shadow:none;
+  }
+  #stage.full canvas{border-radius:0}
+  /* el notch y la barra inferior no deben tapar los botones de esquina */
+  #stage.full .overlay{padding:calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom))}
+  #stage.full #topBtns{top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right))}
+  #stage.full #loginBox{left:calc(12px + env(safe-area-inset-left));bottom:calc(12px + env(safe-area-inset-bottom))}
+  #stage.full #btnTrofeo{right:calc(12px + env(safe-area-inset-right));bottom:calc(12px + env(safe-area-inset-bottom))}
+  #stage.full #top5Panel{right:calc(12px + env(safe-area-inset-right))}
+
   .overlay{
     position:absolute;inset:0;display:flex;flex-direction:column;
     align-items:center;justify-content:center;text-align:center;
@@ -242,6 +259,6 @@
   <div id="hint" class="hidden"></div>
 </div>
 
-<script src="js/game.js?v=20261021g"></script>
+<script src="js/game.js?v=20261021h"></script>
 </body>
 </html>
